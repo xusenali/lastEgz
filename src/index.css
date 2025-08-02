@@ -1,0 +1,16 @@
+*{
+  margin: 0;
+}
+.img{
+  background-image: url('./assets/Screenshot_1.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.maxwith{
+  width: 75%;
+  margin: 10px auto;
+  
+}
+
+@import "tailwindcss";
