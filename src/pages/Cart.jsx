@@ -7,20 +7,57 @@ const Cart = () => {
     const navigate = useNavigate();
     const [cartItems, setCartItems] = useState([]);
 
+    // Mahsulotlarni localStorage'dan olish
     useEffect(() => {
         const storedCart = JSON.parse(localStorage.getItem("cart")) || [];
-        setCartItems(storedCart);
+
+        // Har bir mahsulotga quantity qo‘shamiz agar yo‘q bo‘lsa
+        const cartWithQuantities = storedCart.map(item => ({
+            ...item,
+            quantity: item.quantity || 1
+        }));
+
+        setCartItems(cartWithQuantities);
+        localStorage.setItem("cart", JSON.stringify(cartWithQuantities));
+        window.dispatchEvent(new Event("cartUpdated"));
     }, []);
 
-    const removeFromCart = (id) => {
-        const updatedCart = cartItems.filter(item => item.idMeal !== id);
-        localStorage.setItem("cart", JSON.stringify(updatedCart));
-        setCartItems(updatedCart);
-        toast.success("Mahsulot o‘chirildi");
+    // localStorage va state ni yangilash
+    const updateLocalStorage = (items) => {
+        setCartItems(items);
+        localStorage.setItem("cart", JSON.stringify(items));
         window.dispatchEvent(new Event("cartUpdated"));
     };
 
-    const total = (cartItems.length * 9.99).toFixed(2);
+    // Mahsulotni o‘chirish
+    const removeFromCart = (id) => {
+        const updatedCart = cartItems.filter(item => item.idMeal !== id);
+        updateLocalStorage(updatedCart);
+        toast.success("Mahsulot o‘chirildi");
+    };
+
+    // + tugma
+    const increaseQuantity = (id) => {
+        const updatedCart = cartItems.map(item =>
+            item.idMeal === id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+        updateLocalStorage(updatedCart);
+    };
+
+    // − tugma
+    const decreaseQuantity = (id) => {
+        const updatedCart = cartItems.map(item =>
+            item.idMeal === id && item.quantity > 1
+                ? { ...item, quantity: item.quantity - 1 }
+                : item
+        );
+        updateLocalStorage(updatedCart);
+    };
+
+    // Umumiy narx
+    const total = cartItems
+        .reduce((sum, item) => sum + item.quantity * 9.99, 0)
+        .toFixed(2);
 
     if (cartItems.length === 0) {
         return (
@@ -40,16 +77,17 @@ const Cart = () => {
     }
 
     return (
-        <div className="max-full p-10 mx-auto  sm:p-8">
+        <div className="max-full p-10 mx-auto sm:p-8">
             <Toaster position="top-right" />
             <h1 className="text-2xl font-bold mb-6">🛒 Savatingizdagi mahsulotlar</h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-4">
+                {/* Mahsulotlar ro‘yxati */}
+                <div className="lg:col-span-2 space-y-6">
                     {cartItems.map(item => (
                         <div
                             key={item.idMeal}
-                            className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border rounded-lg shadow-sm"
+                            className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 shadow-md rounded-lg "
                         >
                             <div className="flex items-center gap-4">
                                 <img
@@ -60,25 +98,44 @@ const Cart = () => {
                                 <div>
                                     <h2 className="text-lg font-semibold">{item.strMeal}</h2>
                                     <p className="text-gray-500 text-sm">Kategoriya: Chicken</p>
-                                    <p className="text-green-600 font-medium mt-1">$9.99</p>
+                                    <p className="text-green-600 font-medium mt-1">
+                                        ${(item.quantity * 9.99).toFixed(2)} ({item.quantity} × $9.99)
+                                    </p>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => removeFromCart(item.idMeal)}
-                                className="text-white bg-red-600 hover:bg-red-700 p-2 rounded-full transition"
-                                title="O‘chirish"
-                            >
-                                <FaTrash />
-                            </button>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => decreaseQuantity(item.idMeal)}
+                                    className="bg-gray-200 px-2 rounded text-xl"
+                                >
+                                    −
+                                </button>
+                                <span className="min-w-[24px] text-center font-semibold">{item.quantity}</span>
+                                <button
+                                    onClick={() => increaseQuantity(item.idMeal)}
+                                    className="bg-gray-200 px-2 rounded text-xl"
+                                >
+                                    +
+                                </button>
+                                <button
+                                    onClick={() => removeFromCart(item.idMeal)}
+                                    className="text-white bg-red-600 hover:bg-red-700 p-2 rounded-full transition ml-3"
+                                    title="O‘chirish"
+                                >
+                                    <FaTrash />
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
 
-                <div className="border rounded-lg p-6 shadow-md h-fit bg-white">
+                {/* Jami hisob */}
+                <div className="shadow-xl rounded-lg p-6  flex flex-col gap-6  h-fit bg-white">
                     <h2 className="text-xl font-semibold mb-4">🧾 Jami hisob:</h2>
                     <div className="flex justify-between text-lg mb-4">
                         <span>Mahsulotlar:</span>
-                        <span>{cartItems.length} ta</span>
+                        <span>{cartItems.reduce((a, b) => a + b.quantity, 0)} ta</span>
                     </div>
                     <div className="flex justify-between text-xl font-bold mb-6">
                         <span>Jami:</span>
